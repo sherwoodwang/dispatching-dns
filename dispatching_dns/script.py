@@ -3,6 +3,8 @@ from ._core import DNSService, CachingResolver, DispatchingResolver, LoggingReso
 from yaml import Loader
 import sys
 import signal
+import os
+import pwd, grp
 
 
 def resolver_constructor(factory):
@@ -26,18 +28,35 @@ def main(argv=None):
         config_loader.add_constructor('!service', resolver_constructor(DNSService))
         config_data = config_loader.get_data()
 
-        servers.append(DNSServer(
-            resolver=config_data['resolver'],
-            address=config_data.get('address', ''),
-            port=config_data.get('port', 53)
-        ))
+    servers.append(DNSServer(
+        resolver=config_data['resolver'],
+        address=config_data.get('address', ''),
+        port=config_data.get('port', 53)
+    ))
 
-        servers.append(DNSServer(
-            resolver=config_data['resolver'],
-            address=config_data.get('address', ''),
-            port=config_data.get('port', 53),
-            tcp=True
-        ))
+    servers.append(DNSServer(
+        resolver=config_data['resolver'],
+        address=config_data.get('address', ''),
+        port=config_data.get('port', 53),
+        tcp=True
+    ))
+
+    user = config_data.get('user', None)
+    group = config_data.get('group', None)
+
+    if group is not None:
+        try:
+            group = int(group)
+        except ValueError:
+            group = grp.getgrnam(group).gr_gid
+        os.setgid(group)
+
+    if user is not None:
+        try:
+            user = int(user)
+        except ValueError:
+            user = pwd.getpwnam(user).pw_uid
+        os.setuid(user)
 
     for server in servers:
         server.start_thread()

@@ -5,6 +5,8 @@ Invocation:
 
 Sample Configuration:
 	address: 192.168.1.1
+	user: nobody
+	user: nogroup
 	resolver:
 	  !dispatch
 	    rules:
