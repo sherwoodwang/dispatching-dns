@@ -4,13 +4,13 @@ from setuptools import setup
 
 setup(
     name='dispatching-dns',
-    version='0.0.1',
+    version='0.0.2',
     packages=['dispatching_dns'],
     url='https://github.com/sherwoodwang/dispatching-dns',
     license='2-clause BSD',
-    author='sherwood',
-    author_email='',
-    description='',
+    author='Sherwood Wang',
+    author_email='sherwood@wang.onl',
+    description='A simple suboptimal dns server which forward requests to multiple servers according to domains',
     install_requires=[
         'cachetools',
         'dnslib',

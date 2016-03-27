@@ -4,20 +4,25 @@ from threading import RLock, Thread
 from time import time
 from recordclass import recordclass
 from cachetools import LRUCache
-from ipaddress import ip_address
+from ipaddress import ip_address, IPv6Address
 import os
+
+
+class DNSService:
+    def __init__(self, address, port=53, tcp=False, timeout=None):
+        self.address = ip_address(address)
+        self.port = port
+        self.tcp = tcp
+        self.timeout = timeout
+        self.ipv6 = isinstance(self.address, IPv6Address)
 
 
 class CachingResolver(BaseResolver):
     _Record = recordclass('_Record', 'expire data')
 
-    def __init__(self, cache_size, dest, port=53, tcp=False, timeout=None, ipv6=False):
+    def __init__(self, cache_size, upstreams):
         super().__init__()
-        self._dest = dest
-        self._port = port
-        self._tcp = tcp
-        self._timeout = timeout
-        self._ipv6 = ipv6
+        self._upstreams = upstreams
 
         self._cache = LRUCache(cache_size)
         self._cache_lock = RLock()
@@ -84,20 +89,32 @@ class CachingResolver(BaseResolver):
         self._resolve_in_cache(request.questions, uq, a, now)
 
         if len(uq.questions):
-            ua_pkt = uq.send(self._dest, self._port, self._tcp, self._timeout, self._ipv6)
-            ua = DNSRecord.parse(ua_pkt)
+            for upstream in self._upstreams:
+                try:
+                    ua_pkt = uq.send(
+                        str(upstream.address),
+                        upstream.port,
+                        upstream.tcp,
+                        upstream.timeout,
+                        upstream.ipv6
+                    )
+                    ua = DNSRecord.parse(ua_pkt)
+                except:
+                    continue
 
-            for rr in ua.rr:
-                key = (rr.rname, rr.rtype, rr.rclass)
-                cr = self._Record(now + rr.ttl, {
-                    'rname': rr.rname,
-                    'rtype': rr.rtype,
-                    'rclass': rr.rclass,
-                    'rdata': rr.rdata,
-                })
-                self._add_to_cache(key, cr)
-
-            a.add_answer(*ua.rr)
+                for rr in ua.rr:
+                    key = (rr.rname, rr.rtype, rr.rclass)
+                    cr = self._Record(now + rr.ttl, {
+                        'rname': rr.rname,
+                        'rtype': rr.rtype,
+                        'rclass': rr.rclass,
+                        'rdata': rr.rdata,
+                    })
+                    self._add_to_cache(key, cr)
+                a.add_answer(*ua.rr)
+                break
+            else:
+                raise IOError
 
         return a
 
@@ -127,13 +144,13 @@ class DispatchingResolver(BaseResolver):
 
 
 class LoggingResolver(BaseResolver):
-    def __init__(self, resolver, logfn, write_interval=600):
+    def __init__(self, resolver, log, write_interval=600):
         self._resolver = resolver
-        self._logfn = logfn
+        self._log = log
         self._addresses = set()
-        if os.path.exists(self._logfn):
-            with open(self._logfn, 'r') as log:
-                for entry in log:
+        if os.path.exists(self._log):
+            with open(self._log, 'r') as f_log:
+                for entry in f_log:
                     entry = entry.strip()
                     if entry:
                         self._addresses.add(ip_address(entry))
@@ -162,9 +179,9 @@ class LoggingResolver(BaseResolver):
             return
 
         def write_back():
-            with open(self._logfn, 'w') as log:
+            with open(self._log, 'w') as f_log:
                 for entry in self._addresses:
-                    print(str(entry), file=log)
+                    print(str(entry), file=f_log)
             with self._lock:
                 self._writing = False
         Thread(target=write_back).start()
