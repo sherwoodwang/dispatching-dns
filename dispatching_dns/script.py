@@ -11,7 +11,9 @@ def resolver_constructor(factory):
     return constructor
 
 
-def main(argv):
+def main(argv=None):
+    if argv is None:
+        argv = sys.argv
     config_path = argv[1]
 
     with open(config_path, 'r') as config:
@@ -23,5 +25,6 @@ def main(argv):
         server = DNSServer(resolver=resolver)
     server.start()
 
-main(sys.argv)
+if __name__ == '__main__':
+    main()
 

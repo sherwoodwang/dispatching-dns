@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 from setuptools import setup
 
 setup(
@@ -13,5 +15,11 @@ setup(
         'cachetools',
         'dnslib',
         'pyyaml',
-    ]
+        'recordclass',
+    ],
+    entry_points={
+        'console_scripts': [
+            'dispatching-dns=dispatching_dns.script:main'
+        ],
+    }
 )

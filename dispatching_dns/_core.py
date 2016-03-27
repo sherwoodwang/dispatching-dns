@@ -2,14 +2,14 @@ from dnslib.server import BaseResolver
 from dnslib.dns import DNSRecord, DNSQuestion, RR, QTYPE
 from threading import RLock, Thread
 from time import time
-from collections import namedtuple
+from recordclass import recordclass
 from cachetools import LRUCache
 from ipaddress import ip_address
 import os
 
 
 class CachingResolver(BaseResolver):
-    _Record = namedtuple('_Record', ['expire', 'data'])
+    _Record = recordclass('_Record', 'expire data')
 
     def __init__(self, cache_size, dest, port=53, tcp=False, timeout=None, ipv6=False):
         super().__init__()
@@ -42,7 +42,12 @@ class CachingResolver(BaseResolver):
             if records is None:
                 self._cache[key] = [record]
             else:
-                records.append(record)
+                for erecord in records:
+                    if erecord.data == record.data:
+                        erecord.expire = record.expire
+                        break
+                else:
+                    records.append(record)
 
     def _resolve_in_cache(self, questions, oq, oa, now):
         for q in questions:
