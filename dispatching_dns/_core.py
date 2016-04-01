@@ -166,15 +166,11 @@ class LoggingResolver(BaseResolver):
                     else:
                         self._addresses.add(address)
         self._last_write_time = 0
-        self._last_write_length = len(self._addresses)
         self._write_interval = write_interval
         self._writing = False
         self._lock = RLock()
 
     def _write_log(self):
-        if self._last_write_length == len(self._addresses):
-            return
-
         now = time()
         if now - self._last_write_time < self._write_interval:
             return

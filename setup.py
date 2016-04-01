@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='dispatching-dns',
-    version='0.0.4',
+    version='0.0.5',
     packages=['dispatching_dns'],
     url='https://github.com/sherwoodwang/dispatching-dns',
     license='2-clause BSD',
