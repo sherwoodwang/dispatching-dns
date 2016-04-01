@@ -4,7 +4,7 @@ from threading import RLock, Thread
 from time import time
 from recordclass import recordclass
 from cachetools import LRUCache
-from ipaddress import ip_address, IPv6Address
+from ipaddress import ip_address, IPv6Address, ip_network
 import os
 
 
@@ -144,16 +144,27 @@ class DispatchingResolver(BaseResolver):
 
 
 class LoggingResolver(BaseResolver):
-    def __init__(self, resolver, log, write_interval=600):
+    def __init__(self, resolver, log, exceptions=None, write_interval=600):
+        if exceptions is None:
+            exceptions = []
+        exceptions = [ip_network(exception) for exception in exceptions]
+
         self._resolver = resolver
         self._log = log
+        self._exceptions = exceptions
         self._addresses = set()
         if os.path.exists(self._log):
             with open(self._log, 'r') as f_log:
                 for entry in f_log:
                     entry = entry.strip()
-                    if entry:
-                        self._addresses.add(ip_address(entry))
+                    if not entry:
+                        continue
+                    address = ip_address(entry)
+                    for exception in self._exceptions:
+                        if address in exception:
+                            break
+                    else:
+                        self._addresses.add(address)
         self._last_write_time = 0
         self._last_write_length = len(self._addresses)
         self._write_interval = write_interval
@@ -190,6 +201,11 @@ class LoggingResolver(BaseResolver):
         a = self._resolver.resolve(request, handler)
         for rr in a.rr:
             if rr.rtype in [QTYPE.A, QTYPE.AAAA]:
-                self._addresses.add(ip_address(repr(rr.rdata)))
+                address = ip_address(repr(rr.rdata))
+                for exception in self._exceptions:
+                    if address in exception:
+                        break
+                else:
+                    self._addresses.add(address)
         self._write_log()
         return a
