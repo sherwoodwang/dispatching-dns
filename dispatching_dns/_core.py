@@ -1,5 +1,5 @@
 from dnslib.server import BaseResolver
-from dnslib.dns import DNSRecord, DNSQuestion, RR, QTYPE
+from dnslib.dns import DNSLabel, DNSRecord, DNSQuestion, RR, QTYPE
 from threading import RLock, Thread
 from time import time
 from recordclass import recordclass
@@ -152,19 +152,22 @@ class LoggingResolver(BaseResolver):
         self._resolver = resolver
         self._log = log
         self._exceptions = exceptions
-        self._addresses = set()
+        self._addresses = {}
         if os.path.exists(self._log):
             with open(self._log, 'r') as f_log:
                 for entry in f_log:
-                    entry = entry.strip()
-                    if not entry:
+                    if not entry.strip():
                         continue
-                    address = ip_address(entry)
+                    host, address = entry.split(':')
+                    address = ip_address(address)
                     for exception in self._exceptions:
                         if address in exception:
                             break
                     else:
-                        self._addresses.add(address)
+                        host = DNSLabel(host)
+                        if address not in self._addresses:
+                            self._addresses[address] = []
+                        self._addresses[address].append(host)
         self._last_write_time = 0
         self._write_interval = write_interval
         self._writing = False
@@ -187,8 +190,9 @@ class LoggingResolver(BaseResolver):
 
         def write_back():
             with open(self._log, 'w') as f_log:
-                for entry in self._addresses:
-                    print(str(entry), file=f_log)
+                for address, hosts in self._addresses.items():
+                    for host in hosts:
+                        print('{}: {}'.format(str(host), str(address)), file=f_log)
             with self._lock:
                 self._writing = False
         Thread(target=write_back).start()
@@ -202,6 +206,8 @@ class LoggingResolver(BaseResolver):
                     if address in exception:
                         break
                 else:
-                    self._addresses.add(address)
+                    if address not in self._addresses:
+                        self._addresses[address] = []
+                    self._addresses[address].append(rr.rname)
         self._write_log()
         return a
