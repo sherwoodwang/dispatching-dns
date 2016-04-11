@@ -159,6 +159,8 @@ class LoggingResolver(BaseResolver):
                     if not entry.strip():
                         continue
                     host, address = entry.split(':')
+                    host = host.strip()
+                    address = address.strip()
                     address = ip_address(address)
                     for exception in self._exceptions:
                         if address in exception:
