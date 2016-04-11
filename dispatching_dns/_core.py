@@ -161,15 +161,15 @@ class LoggingResolver(BaseResolver):
                     host, address = entry.split(':')
                     host = host.strip()
                     address = address.strip()
+                    host = DNSLabel(host)
                     address = ip_address(address)
                     for exception in self._exceptions:
                         if address in exception:
                             break
                     else:
-                        host = DNSLabel(host)
                         if address not in self._addresses:
-                            self._addresses[address] = []
-                        self._addresses[address].append(host)
+                            self._addresses[address] = set()
+                        self._addresses[address].add(host)
         self._last_write_time = 0
         self._write_interval = write_interval
         self._writing = False
@@ -210,7 +210,7 @@ class LoggingResolver(BaseResolver):
                 else:
                     with self._lock:
                         if address not in self._addresses:
-                            self._addresses[address] = []
-                        self._addresses[address].append(rr.rname)
+                            self._addresses[address] = set()
+                        self._addresses[address].add(rr.rname)
         self._write_log()
         return a
