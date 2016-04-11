@@ -206,8 +206,9 @@ class LoggingResolver(BaseResolver):
                     if address in exception:
                         break
                 else:
-                    if address not in self._addresses:
-                        self._addresses[address] = []
-                    self._addresses[address].append(rr.rname)
+                    with self._lock:
+                        if address not in self._addresses:
+                            self._addresses[address] = []
+                        self._addresses[address].append(rr.rname)
         self._write_log()
         return a
