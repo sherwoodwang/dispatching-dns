@@ -158,7 +158,7 @@ class LoggingResolver(BaseResolver):
                 for entry in f_log:
                     if not entry.strip():
                         continue
-                    host, address = entry.split(':')
+                    host, address = entry.split(':', 1)
                     host = host.strip()
                     address = address.strip()
                     host = DNSLabel(host)
