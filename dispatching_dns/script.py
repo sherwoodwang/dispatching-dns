@@ -68,17 +68,15 @@ def main(argv=None):
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
-    while True:
-        alive = False
-        try:
-            for server in servers:
-                server.thread.join()
-                if server.isAlive():
-                    alive = True
-        except KeyboardInterrupt:
-            alive = True
-        if not alive:
-            break
+    for server in servers:
+        if server.isAlive():
+            while True:
+                try:
+                    server.thread.join()
+                except KeyboardInterrupt:
+                    pass
+                else:
+                    break
 
 if __name__ == '__main__':
     main()
