@@ -143,7 +143,7 @@ class DispatchingResolver(BaseResolver):
         return a
 
 
-class LoggingResolver(BaseResolver):
+class RecordingResolver(BaseResolver):
     def __init__(self, resolver, db, exceptions=None, write_interval=600):
         if exceptions is None:
             exceptions = []
