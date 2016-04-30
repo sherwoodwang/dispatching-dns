@@ -9,7 +9,7 @@ import os
 
 
 class DNSService:
-    def __init__(self, address, port=53, tcp=False, timeout=None):
+    def __init__(self, address, port=53, tcp=False, timeout=5):
         self.address = ip_address(address)
         self.port = port
         self.tcp = tcp
@@ -183,12 +183,8 @@ class LoggingResolver(BaseResolver):
         with self._lock:
             if not self._writing:
                 self._writing = True
-                to_write = True
             else:
-                to_write = False
-
-        if not to_write:
-            return
+                return
 
         def write_back():
             with open(self._log, 'w') as f_log:
