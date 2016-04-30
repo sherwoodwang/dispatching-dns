@@ -144,38 +144,39 @@ class DispatchingResolver(BaseResolver):
 
 
 class LoggingResolver(BaseResolver):
-    def __init__(self, resolver, log, exceptions=None, write_interval=600):
+    def __init__(self, resolver, db, exceptions=None, write_interval=600):
         if exceptions is None:
             exceptions = []
         exceptions = [ip_network(exception) for exception in exceptions]
 
         self._resolver = resolver
-        self._log = log
+        self._db = db
         self._exceptions = exceptions
         self._addresses = {}
-        if os.path.exists(self._log):
-            with open(self._log, 'r') as f_log:
-                for entry in f_log:
+        if os.path.exists(self._db):
+            with open(self._db, 'r') as f_db:
+                for entry in f_db:
                     if not entry.strip():
                         continue
-                    host, address = entry.split(':', 1)
-                    host = host.strip()
+                    address, hosts = entry.split(':', 1)
                     address = address.strip()
-                    host = DNSLabel(host)
                     address = ip_address(address)
                     for exception in self._exceptions:
                         if address in exception:
                             break
                     else:
-                        if address not in self._addresses:
-                            self._addresses[address] = set()
-                        self._addresses[address].add(host)
+                        for host in hosts.split(','):
+                            host = host.strip()
+                            host = DNSLabel(host)
+                            if address not in self._addresses:
+                                self._addresses[address] = set()
+                            self._addresses[address].add(host)
         self._last_write_time = 0
         self._write_interval = write_interval
         self._writing = False
         self._lock = RLock()
 
-    def _write_log(self):
+    def _write_db(self):
         now = time()
         if now - self._last_write_time < self._write_interval:
             return
@@ -187,10 +188,15 @@ class LoggingResolver(BaseResolver):
                 return
 
         def write_back():
-            with open(self._log, 'w') as f_log:
-                for address, hosts in self._addresses.items():
-                    for host in hosts:
-                        print('{}: {}'.format(str(host), str(address)), file=f_log)
+            with open(self._db, 'w') as f_db:
+                addresses = [*self._addresses.keys()]
+                addresses.sort()
+                for address in addresses:
+                    print(
+                        '{}: {}'.format(
+                            str(address),
+                            ', '.join(str(host) for host in self._addresses[address])),
+                        file=f_db)
             with self._lock:
                 self._writing = False
         Thread(target=write_back).start()
@@ -208,5 +214,5 @@ class LoggingResolver(BaseResolver):
                         if address not in self._addresses:
                             self._addresses[address] = set()
                         self._addresses[address].add(rr.rname)
-        self._write_log()
+        self._write_db()
         return a
