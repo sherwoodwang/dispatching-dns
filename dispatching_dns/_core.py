@@ -189,7 +189,7 @@ class RecordingResolver(BaseResolver):
 
         def write_back():
             with open(self._db, 'w') as f_db:
-                addresses = [*self._addresses.keys()]
+                addresses = list(self._addresses.keys())
                 addresses.sort()
                 for address in addresses:
                     print(
