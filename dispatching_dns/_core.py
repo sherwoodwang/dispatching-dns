@@ -1,10 +1,11 @@
 from dnslib.server import BaseResolver
-from dnslib.dns import DNSLabel, DNSRecord, DNSQuestion, RR, QTYPE
+from dnslib.dns import DNSLabel, DNSRecord, DNSQuestion, RR, QTYPE, CLASS
+import dnslib.dns as dns
 from threading import RLock, Thread
 from time import time
 from recordclass import recordclass
 from cachetools import LRUCache
-from ipaddress import ip_address, IPv6Address, ip_network
+from ipaddress import ip_address, IPv4Address, IPv6Address, ip_network
 import os
 
 
@@ -17,14 +18,14 @@ class DNSService:
         self.ipv6 = isinstance(self.address, IPv6Address)
 
 
-class CachingResolver(BaseResolver):
+class ProxyResolver(BaseResolver):
     _Record = recordclass('_Record', 'expire data')
 
-    def __init__(self, cache_size, upstreams):
+    def __init__(self, upstreams, cache_size=None):
         super().__init__()
         self._upstreams = upstreams
 
-        self._cache = LRUCache(cache_size)
+        self._cache = LRUCache(cache_size) if cache_size else None
         self._cache_lock = RLock()
 
     def _query_cache(self, key):
@@ -42,6 +43,9 @@ class CachingResolver(BaseResolver):
             return records
 
     def _add_to_cache(self, key, record):
+        if self._cache is None:
+            return
+
         with self._cache_lock:
             records = self._cache.get(key, None)
             if records is None:
@@ -121,7 +125,10 @@ class CachingResolver(BaseResolver):
 
 class DispatchingResolver(BaseResolver):
     def __init__(self, rules, targets):
-        self._rules = rules
+        self._rules = [
+            (suffix, jump if isinstance(jump, int) else ip_address(jump))
+            for suffix, jump in rules
+            ]
         self._targets = targets
 
     def resolve(self, request, handler):
@@ -130,8 +137,15 @@ class DispatchingResolver(BaseResolver):
         for q in request.questions:
             for suffix, jump in self._rules:
                 if q.qname.matchSuffix(suffix):
-                    qll[jump].append(q)
-                    break
+                    if isinstance(jump, int):
+                        qll[jump].append(q)
+                        break
+                    elif q.qclass == CLASS.IN and q.qtype == QTYPE.A and isinstance(jump, IPv4Address):
+                        a.add_answer(RR(q.qname, QTYPE.A, CLASS.IN, 1, dns.A(str(jump))))
+                        break
+                    elif q.qclass == CLASS.IN and q.qtype == QTYPE.AAAA and isinstance(jump, IPv6Address):
+                        a.add_answer(RR(q.qname, QTYPE.AAAA, CLASS.IN, 1, dns.AAAA(str(jump))))
+                        break
             else:
                 qll[0].append(q)
         for i, ql in enumerate(qll):

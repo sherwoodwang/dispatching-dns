@@ -17,9 +17,9 @@ Sample Configuration:
 		upstreams:
 		  - !service
 		    address: 192.168.0.1
-	      - !log
+	      - !record
 		resolver:
-		  !cache
+		  !proxy
 		    cache_size: 500
 		    upstreams:
 		      - !service

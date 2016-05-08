@@ -1,1 +1,1 @@
-from ._core import DNSService, CachingResolver, DispatchingResolver, RecordingResolver
+from ._core import DNSService, ProxyResolver, DispatchingResolver, RecordingResolver

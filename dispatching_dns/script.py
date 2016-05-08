@@ -1,5 +1,5 @@
 from dnslib.server import DNSServer
-from ._core import DNSService, CachingResolver, DispatchingResolver, RecordingResolver
+from ._core import DNSService, ProxyResolver, DispatchingResolver, RecordingResolver
 from yaml import Loader
 import sys
 import signal
@@ -22,7 +22,7 @@ def main(argv=None):
     servers = []
     with open(config_path, 'r') as config:
         config_loader = Loader(config)
-        config_loader.add_constructor('!cache', resolver_constructor(CachingResolver))
+        config_loader.add_constructor('!proxy', resolver_constructor(ProxyResolver))
         config_loader.add_constructor('!dispatch', resolver_constructor(DispatchingResolver))
         config_loader.add_constructor('!record', resolver_constructor(RecordingResolver))
         config_loader.add_constructor('!service', resolver_constructor(DNSService))
