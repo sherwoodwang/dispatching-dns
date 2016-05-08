@@ -1,29 +1,29 @@
 A simple suboptimal dns server which forward requests to multiple servers according to domains.
 
 Invocation:
-	> dispatching-dns <config.yaml>
+    > dispatching-dns <config.yaml>
 
 Sample Configuration:
-	address: 192.168.1.1
-	user: nobody
-	user: nogroup
-	resolver:
-	  !dispatch
-	    rules:
-	      - ['google.com', 1]
-	    targets:
-	      - !cache
-		cache_size: 5000
-		upstreams:
-		  - !service
-		    address: 192.168.0.1
-	      - !record
-		resolver:
-		  !proxy
-		    cache_size: 500
-		    upstreams:
-		      - !service
-			address: 8.8.8.8
-		      - !service
-			address: 8.8.4.4
-		log: addresses.log
+    address: 192.168.1.1
+    user: nobody
+    user: nogroup
+    resolver:
+      !dispatch
+        rules:
+          - ['google.com', 1]
+        targets:
+          - !cache
+            cache_size: 5000
+            upstreams:
+              - !service
+                address: 192.168.0.1
+          - !record
+            resolver:
+              !proxy
+                cache_size: 500
+                upstreams:
+                  - !service
+                    address: 8.8.8.8
+                  - !service
+                    address: 8.8.4.4
+            log: addresses.log

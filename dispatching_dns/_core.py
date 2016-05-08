@@ -126,8 +126,8 @@ class ProxyResolver(BaseResolver):
 class DispatchingResolver(BaseResolver):
     def __init__(self, rules, targets):
         self._rules = [
-            (suffix, jump if isinstance(jump, int) else ip_address(jump))
-            for suffix, jump in rules
+            (name, jump if isinstance(jump, int) else ip_address(jump))
+            for name, jump in rules
             ]
         self._targets = targets
 
@@ -135,15 +135,15 @@ class DispatchingResolver(BaseResolver):
         qll = [[] for _ in range(len(self._targets))]
         a = request.reply()
         for q in request.questions:
-            for suffix, jump in self._rules:
-                if q.qname.matchSuffix(suffix):
-                    if isinstance(jump, int):
-                        qll[jump].append(q)
-                        break
-                    elif q.qclass == CLASS.IN and q.qtype == QTYPE.A and isinstance(jump, IPv4Address):
+            for name, jump in self._rules:
+                if q.qname.matchSuffix(name) and isinstance(jump, int):
+                    qll[jump].append(q)
+                    break
+                if q.qname == name and q.qclass == CLASS.IN:
+                    if q.qtype == QTYPE.A and isinstance(jump, IPv4Address):
                         a.add_answer(RR(q.qname, QTYPE.A, CLASS.IN, 1, dns.A(str(jump))))
                         break
-                    elif q.qclass == CLASS.IN and q.qtype == QTYPE.AAAA and isinstance(jump, IPv6Address):
+                    if q.qtype == QTYPE.AAAA and isinstance(jump, IPv6Address):
                         a.add_answer(RR(q.qname, QTYPE.AAAA, CLASS.IN, 1, dns.AAAA(str(jump))))
                         break
             else:
