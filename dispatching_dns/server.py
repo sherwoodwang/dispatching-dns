@@ -1,10 +1,13 @@
-from dnslib.server import DNSServer
-from ._core import DNSService, ProxyResolver, DispatchingResolver, RecordingResolver
-from yaml import Loader
-import sys
-import signal
+import grp
 import os
-import pwd, grp
+import pwd
+import signal
+import sys
+
+from dnslib.server import DNSServer
+from yaml import Loader
+
+from ._core import DNSService, ProxyResolver, DispatchingResolver, RecordingResolver
 
 
 def resolver_constructor(factory):
@@ -19,7 +22,6 @@ def main(argv=None):
         argv = sys.argv
     config_path = argv[1]
 
-    servers = []
     with open(config_path, 'r') as config:
         config_loader = Loader(config)
         config_loader.add_constructor('!proxy', resolver_constructor(ProxyResolver))
@@ -28,21 +30,27 @@ def main(argv=None):
         config_loader.add_constructor('!service', resolver_constructor(DNSService))
         config_data = config_loader.get_data()
 
+    serve(config_data)
+
+
+def serve(config):
+    servers = []
+
     servers.append(DNSServer(
-        resolver=config_data['resolver'],
-        address=config_data.get('address', ''),
-        port=config_data.get('port', 53)
+        resolver=config['resolver'],
+        address=config.get('address', ''),
+        port=config.get('port', 53)
     ))
 
     servers.append(DNSServer(
-        resolver=config_data['resolver'],
-        address=config_data.get('address', ''),
-        port=config_data.get('port', 53),
+        resolver=config['resolver'],
+        address=config.get('address', ''),
+        port=config.get('port', 53),
         tcp=True
     ))
 
-    user = config_data.get('user', None)
-    group = config_data.get('group', None)
+    user = config.get('user', None)
+    group = config.get('group', None)
 
     if group is not None:
         try:

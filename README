@@ -6,13 +6,13 @@ Invocation:
 Sample Configuration:
     address: 192.168.1.1
     user: nobody
-    user: nogroup
+    group: nogroup
     resolver:
       !dispatch
         rules:
           - ['google.com', 1]
         targets:
-          - !cache
+          - !proxy
             cache_size: 5000
             upstreams:
               - !service
